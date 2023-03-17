@@ -4,6 +4,31 @@ author: "Martin Blasi"
 date: "2023-03-15"
 output: html_document
 ---
+
+Next TO DO
+a)Modell-Annahmen prüfen: IM WESENTLICH GEHT ES UM DIE LINEARE REGRESSION
+
+- Grade regression: linear => error normality + constant variance NICHT GEGEBEN!!
+=>Robust standard errors
+or poisson - error normality + constant variance & equidispersion auch NICHT GEGEBEN!!
+=>ist quasi-poisson besser?
+
++ censored count data prüfen!! Wößmann Umgang mit student test outcomes
+
+- Binary regression: error centered at zero - roughly given
+
+b)Explanation Teil weiter ausführen
++alles für Portugisiesch laufen lassen und vergleichen
++unter den, die bestehen, Arbeitszeit relativ zur Note vergleichen (Hypothese: Mathe=Talentfach, Sprache=Übungsfach)
+
+Clustering? nach noten über die Perioden und ob die gruppen andere charakteristika haben
+- G3-G1: new outcome, which factors matter here? e.g. paid classes
+
+c)Prediction Teil bauen
+Prediction model: cross-validation and percent of mis-classification
+
+-->random forest ausprobieren? wenn wir Zeit und Lust haben
+
 ```{r}
 setwd("C:/MARTIN/UPF/UPF Studies/Second trimester/MSC/final project/1STUDENT/student")
 
@@ -23,83 +48,11 @@ library(pROC)
 library(keras)
 library(mlbench)
 library(mgcv)
+library(ggpubr)
 ```
 
 ```{r}
 source('~/github/statcomp/code/routines.R')
-```
-
-Dimension reduction - does not work with categorical variables
-```{r}
-X <- as.matrix(mat)
-
-Xs <- scale(X)
-R <- cov(Xs)
-```
-
-```{r}
-l <- eigen(R)$values
-V <- eigen(R)$vectors
-Y <- Xs %*% V
-# the portion of the variance that retains each PC
-R2 = l / sum(l) *100
-# accumulating this quantities:
-cumsum( l / sum(l))
-
-#automatically
-library(ade4)
-library(factoextra)
-pca.mat = dudi.pca(mat, scannf = FALSE)
-pca.mat$eig
-cumsum(pca.mat$eig)/sum(pca.mat$eig)
-fviz_eig(pca.mat, geom = "bar", bar_width = 0.3, addlabels=T) + ggtitle("")
-```
-
-```{r}
-#Plot
-plot(Y[,1:2],
-  type="n", # don't plot anything now
-  asp = 1, # aspect ratio, very important!
-  main=paste("Variables plot, expl. var is ",
-               round(R2[1]+R2[2],1), " %"),
-  xlab=paste("CP1(", round(R2[1],1), "%)"), # title x axis
-  ylab=paste("CP2(", round(R2[2],1), "%)") # title y axis
-)
-
-# add the axis
-abline(v=0, col="blue")
-abline(h=0, col="blue")
-
-# the dots and names
-points(Y[,1:2], pch=".") # plot a dot per row
-text(Y[,1:2],row.names(df.empref2),cex=0.6)
-```
-
-SVD and Variables Plot
-```{r}
-#Carry out the Singular Value Decomposition
-svd <- svd(Xs)
-
-
-Utilde <- svd$u[,1:2] %*% sqrt(diag(svd$d[1:2]))
-Vtilde <- svd$v[,1:2] %*% sqrt(diag(svd$d[1:2]))
-
-
-nn <- paste(rownames(Xs))
-xlim <- ylim <- range(c(range(1.5*Vtilde)))
-plot(NULL,xlab='First biplot component',ylab='Second biplot component',xlim=xlim,ylim=ylim,cex.lab=1.25)
-arrows(x0=0,y0=0,x1=Vtilde[,1],y1=Vtilde[,2],col='red')
-text(.9*Vtilde[,1],Vtilde[,2],paste(colnames(Xs)),pos=c(1,3),col='red',cex=1.25)
-```
-
-```{r}
-nn <- paste(rownames(Xs))
-xlim <- ylim <- range(c(range(Vtilde),range(1.5*Vtilde)))
-plot(Utilde,xlab='First biplot component',ylab='Second biplot component',xlim=xlim,ylim=ylim,cex.lab=1.25)
-text(Utilde[,1:2],nn,pos=c(4,1,2),cex=1.25)
-arrows(x0=0,y0=0,x1=Vtilde[,1],y1=Vtilde[,2],col='red')
-text(.9*Vtilde[,1],Vtilde[,2],paste(colnames(Xs)),pos=c(1,3),col='red',cex=1.25)
-
 ```
 
 ```{r}
@@ -153,9 +106,6 @@ fitallqpnog <- glm(G3~.,data=dfnog,family="quasipoisson")
 summary(fitallqpnog)
 ```
 
-
-
-
 ```{r}
 df <- mat
 df$pass <- ifelse(df$G3>9, 1 ,0)
@@ -172,7 +122,7 @@ bestBIC(pass~.  ,data=dfbin, family="binomial")
 ```
 
 ```{r}
-fitbin <- glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfless,family="binomial")
+fitbin <- glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
 summary(fitbin)
 ```
 
@@ -186,6 +136,95 @@ df$gradecat <- cut(df$G3, breaks=c(0,9,11,13,15,20), labels=c(0,1,2,3,4))
 #fitcatall <- glm(gradecat~.,data=dfless2,family=poisson())
 #summary(fitcatall)
 ```
+
+Sub-sample analysis of students who pass:
+```{r}
+dfpass <- subset(df,pass==1)
+dfpass <- select(dfpass, -c("pass", "resl", "resbn", "predl"))
+dffail <- subset(df, pass==0)
+dffail <- select(dffail, -c("pass", "resl", "resbn", "predl"))
+```
+
+```{r}
+fitallpass <- lm(G3~.,data=dfpass)
+summary(fitallpass)
+```
+```{r}
+bestBIC(G3~., data=dfpass)
+```
+--> age, absences and G1 out
+-->rather consider significant effects in full model than bestBIC?
+-->R^2 over 90%
+
+```{r}
+fitallfail <- lm(G3~.,data=dffail)
+summary(fitallfail)
+```
+```{r}
+bestBIC(G3~.,data=dffail)
+```
+-->also absencences and previous performance
+-->R^2 much lower though (close to 60%)
+
+
+Prediction model
+-->for full linear model and the binary case
+
+
+
+```{r}
+## 75% of the sample size
+smp_size <- floor(0.90 * nrow(dfbin))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(dfbin)), size = smp_size)
+
+train <- dfbin[train_ind, ]
+test <- dfbin[-train_ind, ]
+```
+
+```{r}
+#rerun the models on the training data
+fitbin2= glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
+```
+
+```{r}
+pibintest= predict(fitbin2, type='response', newdata=test)
+```
+
+```{r}
+table(pibintest > 0.5, test$pass)
+```
+
+```{r}
+cost_misclass= function(yobs, ypred) {
+  err1= (ypred > 0.5) & (yobs==0)
+  err2= (ypred < 0.5) & (yobs==1)
+  ans= sum(err1 | err2) / length(yobs)
+  return(ans)
+}
+```
+
+```{r}
+misclas= c(cost_misclass(test$pass, pibintest))
+names(misclas)= c('model 1')
+misclas
+```
+Training-data misclassification as comparison
+```{r}
+pibin= predict(fitbin2, type='response')
+loss.insample= c(cost_misclass(train$pass, pibin))
+names(loss.insample)= c('model 1')
+loss.insample
+```
+Cross-validation
+```{r}
+fitbin2cv= cv.glm(dfbin, fitbin2, cost=cost_loglik_logistic, K=10)
+loss= c(fitbin2cv$delta[1])
+loss
+```
+
 
 Plots
 ```{r}
@@ -210,31 +249,44 @@ ggplot(data=df, aes(G2,G3,color=pass))+
   coord_cartesian(xlim=c(0,20))
 ```
 
-
-Next TO DO
-a)Modell-Annahmen prüfen:
-- Grade regression: linear => error normality + constant variance
-or poisson - error normality + constant variance & overdispersion
-
-+ censored count data prüfen!! Wößmann Umgang mit student test outcomes
-
-- Binary regression: error normality
-=>in den Appendix
-
-b)Explanation Teil weiter ausführen
-+alles für Portugisiesch laufen lassen und vergleichen
-+unter den, die bestehen, Arbeitszeit relativ zur Note vergleichen (Hypothese: Mathe=Talentfach, Sprache=Übungsfach)
-
-Clustering? nach noten über die Perioden und ob die gruppen andere charakteristika haben
-- G3-G1: new outcome, which factors matter here? e.g. paid classes
-
-c)Prediction Teil bauen
-Prediction model: cross-validation and percent of mis-classification
-
--->random forest ausprobieren? wenn wir Zeit und Lust haben
-
-
 APPENDIX
+
+LM-model check
+-->Models: fit1=bestBIC (fitall auch?)
+```{r}
+df$predl= predict(fit1)
+df$resl= residuals(fit1)
+```
+
+Linearity
+```{r}
+ggplot(df, aes(predl, resl)) +
+  geom_point() +
+  geom_smooth() +
+  geom_abline(slope=0, intercept=0, col='gray') +
+  labs(x='Model prediction', y='Residuals')
+```
+Constant residual variance
+```{r}
+ggplot(df, aes(x=predl, y=resl)) + 
+  geom_boxplot(mapping = aes(group = cut_width(predl, 0.2))) +
+  labs(x='Model prediction', y='Residuals')
+```
+Error normality
+```{r}
+ggplot(df, aes(x=resl)) +
+  geom_histogram(aes(y= ..density..)) +
+  stat_overlay_normal_density(linetype = "dashed") +
+  labs(x='Residuals')
+```
+
+```{r}
+ggplot(df, aes(sample=scale(resl))) +
+  geom_qq() +
+  geom_abline(slope=1, intercept=0)
+```
+-->Errors are not normal and variance is not constant!!
+=>Apply robust standard errors
 
 Poisson-check
 ```{r}
@@ -249,6 +301,19 @@ ggplot(poires, aes(pred, respearson)) + geom_point() + geom_smooth() + labs(x='P
 poires2= mutate(poires, predcut= cut_number(pred, 10))
 ggplot(poires2, aes(x=predcut, y=respearson)) + geom_boxplot()
 ```
+Error normality
+```{r}
+ggplot(poires, aes(x=respearson)) +
+  geom_histogram(aes(y= ..density..)) +
+  stat_overlay_normal_density(linetype = "dashed") +
+  labs(x='Residuals')
+```
+
+```{r}
+ggplot(poires, aes(sample=scale(respearson))) +
+  geom_qq() +
+  geom_abline(slope=1, intercept=0)
+```
 
 ```{r}
 mean(poires$respearson)
@@ -256,4 +321,21 @@ sd(poires$respearson)
 mean(df$G3)
 var(df$G3)
 ```
+=>Huge overdispersion and variance not constant, errors not normal
 
+Binomial check
+```{r}
+binres= mutate(df, pred= predict(fitbin), resdev= residuals(fitbin, type='deviance'), respearson= residuals(fitbin, type='pearson'))
+```
+
+```{r}
+ggplot(binres, aes(pred, respearson)) + geom_point() + geom_smooth() + labs(x='Predicted', y='Pearson residual')
+```
+Residuals seem roughly centered at zero
+
+Constant residual variance
+```{r}
+ggplot(binres, aes(x=pred, y=respearson)) + 
+  geom_boxplot(mapping = aes(group = cut_width(pred, 0.2))) +
+  labs(x='Model prediction', y='Residuals')
+```
