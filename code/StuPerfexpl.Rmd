@@ -36,6 +36,7 @@ Prediction model: cross-validation and percent of mis-classification
 ```{r}
 mat <- read.csv2('../data/student-mat.csv')
 por <- read.csv2('../data/student-por.csv')
+
 ```
 
 ```{r, warning=FALSE}
