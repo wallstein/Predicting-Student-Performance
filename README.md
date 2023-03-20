@@ -42,6 +42,7 @@ Prediction model: cross-validation and percent of mis-classification
 
 -->random forest ausprobieren? wenn wir Zeit und Lust haben
 
+<<<<<<< Updated upstream
 
 ## Data:
 ### Variables:
@@ -81,6 +82,11 @@ These grades are related with the course subject, Math or Portuguese:
 31 G1 - first period grade (numeric: from 0 to 20)
 31 G2 - second period grade (numeric: from 0 to 20)
 32 G3 - final grade (numeric: from 0 to 20, output target)
+=======
+## Data
+### Variables
+see Student Performance.Rmd
+>>>>>>> Stashed changes
 
 ### Additional note: 
 there are several (382) students that belong to both datasets . 
