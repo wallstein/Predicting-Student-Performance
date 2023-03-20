@@ -130,3 +130,5 @@ dmypy.json
 
 # Mac Stuff
 .DS_Store
+.RData
+.Rhistory
