@@ -1,32 +1,18 @@
 # MSC-Final-Project
 Repository for the Final Project in Modern Statistical Computing by Jonas Wallstein &amp; Martin Blasi
 
-<<<<<<< Updated upstream
-## Todo 
-
-Jonas: 
-=======
 ## Next ToDo
 ### Jonas 
->>>>>>> Stashed changes
 - subsample improvement, auch mit subsample pass fail vergleichen
 - Rmd files organisieren
 - prediction anschauen
 - clustering
-
-<<<<<<< Updated upstream
-Martin:
-=======
 ### Martin
->>>>>>> Stashed changes
 - portugisisch
 - grade diff angucken
 - clustering
 - Email 
 
-<<<<<<< Updated upstream
-
-=======
 ## Struktur
 ### Part I: Modell-Annahmen prüfen: 
 IM WESENTLICH GEHT ES UM DIE LINEARE REGRESSION
@@ -55,7 +41,6 @@ Clustering? nach noten über die Perioden und ob die gruppen andere charakterist
 Prediction model: cross-validation and percent of mis-classification
 
 -->random forest ausprobieren? wenn wir Zeit und Lust haben
-
 
 ## Data
 ### Variables
@@ -115,4 +100,3 @@ You should turn in:
 (3) A short dashboard or interactive document in html format displaying your main results. It should be 1 pages with ≤ 3 tabs containing only a few key figures / tables. Also turn in the markdown file with the code used to produce the document 
 
 - Final report due: March 23rd, 2023 
->>>>>>> Stashed changes
