@@ -5,10 +5,11 @@ date: "2023-03-15"
 output: html_document
 ---
 ```{r}
-setwd("C:/MARTIN/UPF/UPF Studies/Second trimester/MSC/final project/1STUDENT/student")
-
-mat <- read.csv2('student-mat.csv')
-por <- read.csv2('student-por.csv')
+#setwd("C:/MARTIN/UPF/UPF Studies/Second trimester/MSC/final project/1STUDENT/student")
+library(tidyverse)
+library(mombf)
+mat <- read.csv2('../data/student-mat.csv')
+por <- read.csv2('../data/student-por.csv')
 ```
 
 # Attributes for both student-mat.csv (Math course) and student-por.csv (Portuguese language course) datasets:
@@ -72,12 +73,35 @@ You should turn in:
 1) Explore relationship of grades GP1-3 - interesting patterns?
 +Other descriptive summaries: 
 2) from MDA: perform PCA
-3) Build a predictive model: Goal - A)what factors are important in student performanc & B) What techniques can we use to build a good predictive model
+3) Build a predictive model: Goal - A)what factors are important in student performance & B) What techniques can we use to build a good predictive model
 - binary: 0/1 fail/pass (logistic)
 - Categorical: splitting grades in 5 categories (count data, poisson)
 - with full grades: 0-20 (also count data, poisson, negative binomial)
-=>use regression techniques and finde adequate specificaiton (model comparison)
+=>use regression techniques and find adequate specification (model comparison)
 =>Use cross-validation
 Optional
 4) Go deeper and use Data Mining techniques like in paper: Random forest - compare with results from 3)
 5) Is this even a multilevel case? (lecture 9) Consider that?
+
+
+```{r}
+mat.covariates = select(mat, -c("G1", "G2", "G3"))
+mat.G1 = select(mat, -c("G2", "G3"))
+fit1<- glm(G1 ~ ., data = mat.G1)
+summary(fit1)
+
+mat.G2 = select(mat, -c("G1", "G3"))
+fit2<- glm(G2 ~ ., data = mat.G2)
+summary(fit2)
+
+```
+
+```{r}
+fit3 <- bestBIC(G3 ~ ., data = mat, family = "poisson")
+summary(fit3)
+
+fit4 <- glm(G3 ~ absences + G2, data = mat, family = "poisson")
+summary(fit4)
+```
+
+
