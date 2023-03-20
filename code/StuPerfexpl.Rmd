@@ -34,10 +34,9 @@ Prediction model: cross-validation and percent of mis-classification
 -->random forest ausprobieren? wenn wir Zeit und Lust haben
 
 ```{r}
-setwd("C:/MARTIN/UPF/UPF Studies/Second trimester/MSC/final project/1STUDENT/student")
+mat <- read.csv2('../data/student-mat.csv')
+por <- read.csv2('../data/student-por.csv')
 
-mat <- read.csv2('student-mat.csv')
-por <- read.csv2('student-por.csv')
 ```
 
 ```{r, warning=FALSE}
@@ -56,7 +55,7 @@ library(ggpubr)
 ```
 
 ```{r}
-source('~/github/statcomp/code/routines.R')
+source('routines.R')
 ```
 
 ```{r}
