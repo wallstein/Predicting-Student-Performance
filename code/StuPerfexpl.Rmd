@@ -19,6 +19,10 @@ or poisson - error normality + constant variance & equidispersion auch NICHT GEG
 
 b)Explanation Teil weiter ausführen
 +alles für Portugisiesch laufen lassen und vergleichen
+
+-subsample: Grade-differences (G1 to G3), students who got worse/better (regressions);
+
+pass/fail - different explanatory (factors)
 +unter den, die bestehen, Arbeitszeit relativ zur Note vergleichen (Hypothese: Mathe=Talentfach, Sprache=Übungsfach)
 
 Clustering? nach noten über die Perioden und ob die gruppen andere charakteristika haben
