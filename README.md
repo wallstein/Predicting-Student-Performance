@@ -3,16 +3,16 @@ Repository for the Final Project in Modern Statistical Computing by Jonas Wallst
 
 ## Next ToDo
 ### Jonas
-- coefplot?
-- table mit significant
-- Rmd code in Reihenfolge bringen
-- bestBIC raus
-- random forest?
-- portugaaaal angucken
+- [ ] coefplot?
+- [ ] table mit significant
+- [x] Rmd code in Reihenfolge bringen
+- [x] bestBIC raus
+- [ ] random forest?
+- [ ] portugaaaal angucken
 
 ### Martin
-- random forest?
-- portugaaaal angucken
+- [ ] random forest?
+- [ ] portugaaaal angucken
 
 ## Struktur
 ### Part I: Modell-Annahmen prüfen: 
