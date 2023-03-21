@@ -2,16 +2,17 @@
 Repository for the Final Project in Modern Statistical Computing by Jonas Wallstein &amp; Martin Blasi
 
 ## Next ToDo
-### Jonas 
-- subsample improvement, auch mit subsample pass fail vergleichen
-- Rmd files organisieren
-- prediction anschauen
-- clustering
+### Jonas
+- coefplot?
+- table mit significant
+- Rmd code in Reihenfolge bringen
+- bestBIC raus
+- random forest?
+- portugaaaal angucken
+
 ### Martin
-- portugisisch
-- grade diff angucken
-- clustering
-- Email 
+- random forest?
+- portugaaaal angucken
 
 ## Struktur
 ### Part I: Modell-Annahmen prüfen: 
