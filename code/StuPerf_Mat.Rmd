@@ -2,7 +2,7 @@
 title: "Final Project Modern Statistical Computing"
 author: "Martin Blasi and Jonas Wallstein"
 date: "2023-03-15"
-output: html_document
+output: pdf_document
 ---
 
 ## Setup
@@ -25,6 +25,8 @@ library(keras)
 library(mlbench)
 library(mgcv)
 library(ggpubr)
+library(huxtable)
+library(jtools)
 ```
 
 ```{r}
@@ -41,6 +43,7 @@ summary(fitall)
 # bestBIC(G3~., data=mat)
 # fit1 <- lm(G3~age +famrel+ absences+ G1+ G2,data=mat)
 # summary(fit1)
+
 ```
 
 #### Full linear model without grades
@@ -49,6 +52,11 @@ dfnog <- select(mat, -c("G1", "G2"))
 fitallnog <- lm(G3~.,data=dfnog)
 summary(fitallnog)
 #bestBIC(G3~., data=dfnog)
+```
+
+#### Test table
+```{r}
+export_summs(fitall, fitallnog, digits=4, error_format = "({p.value})", model.names = c("Full Linear model", "Full linear model without grades"), results = 'asis')
 ```
 
 
