@@ -1,0 +1,326 @@
+---
+title: "StuPerf_POR_all"
+author: "Martin Blasi"
+date: "2023-03-21"
+output: html_document
+---
+
+```{r}
+por <- read.csv2('~/github/MSC-Final-Project/data/student-por.csv')
+```
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(boot)
+library(coefplot)
+library(modelr)
+library(openintro)
+library(brglm)
+library(mombf)
+library(pROC)
+library(keras)
+library(mlbench)
+library(mgcv)
+library(ggpubr)
+```
+
+```{r}
+source('~/github/statcomp/code/routines.R')
+```
+
+#Full linear model
+```{r}
+fitall <- lm(G3~.,data=por)
+summary(fitall)
+```
+
+```{r}
+bestBIC(G3~., data=por)
+```
+#Linear best BIC model
+```{r}
+fit1 <- lm(G3~age +famrel+ absences+ G1+ G2,data=por)
+summary(fit1)
+```
+
+```{r}
+dfnog <- select(por, -c("G1", "G2"))
+```
+
+#Full linear model without grades
+```{r}
+fitallnog <- lm(G3~.,data=dfnog)
+summary(fitallnog)
+```
+
+```{r}
+bestBIC(G3~., data=dfnog)
+```
+#Full POISSON model
+```{r}
+fitallp <- glm(G3~.,data=por, family=poisson())
+summary(fitallp)
+```
+#Poisson best BIC
+```{r}
+bestBIC(G3~.,data=por, family="poisson")
+```
+
+#Full POISSON without grades
+```{r}
+fitallpnog <- glm(G3~.,data=dfnog,family="poisson")
+summary(fitallpnog)
+```
+#Full QUASI-POISSON adjusting for overdispersion
+```{r}
+fitallqp <- glm(G3~.,data=por,family="quasipoisson")
+summary(fitallqp)
+```
+#Full quasi-poisson without grades
+```{r}
+fitallqpnog <- glm(G3~.,data=dfnog,family="quasipoisson")
+summary(fitallqpnog)
+```
+
+```{r}
+df <- por
+df$pass <- ifelse(df$G3>9, 1 ,0)
+```
+
+#Full binary pass/fail model
+```{r}
+dfbin <- select(df, -c("G3"))
+fitallb <- glm(pass~.,data=dfbin,family=binomial())
+summary(fitallb)
+```
+#Binary best BIC
+```{r}
+bestBIC(pass~.  ,data=dfbin, family="binomial")
+```
+
+```{r}
+fitbin <- glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
+summary(fitbin)
+```
+
+```{r}
+df$gradelevel <- cut(df$G3, breaks=c(0,9,11,13,15,20), labels=c("Fail", "Sufficient", "Satisfactory", "Good", "Excellent"))
+df$gradecat <- cut(df$G3, breaks=c(0,9,11,13,15,20), labels=c(0,1,2,3,4))
+```
+
+```{r}
+#dfless2 <- select(dfless, -c("gradelevel"))
+#fitcatall <- glm(gradecat~.,data=dfless2,family=poisson())
+#summary(fitcatall)
+```
+
+#Sub-sample analysis of students who pass:
+```{r}
+dfpass <- subset(df,pass==1)
+dfpass <- select(dfpass, -c("pass", "resl", "predl", "gradelevel", "gradecat"))
+dffail <- subset(df, pass==0)
+dffail <- select(dffail, -c("pass", "resl", "predl", "gradelevel", "gradecat"))
+```
+
+```{r}
+fitallpass <- lm(G3~.,data=dfpass)
+summary(fitallpass)
+```
+#Best BIC for students who pass
+```{r}
+bestBIC(G3~., data=dfpass)
+```
+--> age, absences and G1 out
+-->rather consider significant effects in full model than bestBIC?
+-->R^2 over 90%
+
+#Full linear model for students who fail
+```{r}
+fitallfail <- lm(G3~.,data=dffail)
+summary(fitallfail)
+```
+#Best BIC for students who fail
+```{r}
+bestBIC(G3~.,data=dffail)
+```
+-->also absencences and previous performance
+-->R^2 much lower though (close to 60%)
+
+## What students have improved their grades over the course of the year? What role did support from the family/school play?
+
+```{r}
+df.diff <- df %>% 
+  mutate(gradediff13 = G3 - G1) %>% 
+  select(-c("G1", "G2", "G3", "pass", "gradecat", "gradelevel")) %>% 
+  mutate(improvement = ifelse(gradediff13 >= 0, 1, 0))
+
+fitdiff1 <- lm(gradediff13 ~ ., data = df.diff)
+summary(fitdiff1)
+bestBIC(gradediff13 ~. , data = df.diff)
+
+fitdiff2 <- glm(improvement ~ . -gradediff13, data = df.diff, family = "binomial")
+summary(fitdiff2)
+bestBIC(improvement ~. -gradediff13, data = df.diff)
+
+```
+
+
+#Prediction model
+-->for full linear model and the binary case
+
+```{r}
+## 75% of the sample size
+smp_size <- floor(0.90 * nrow(dfbin))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(dfbin)), size = smp_size)
+
+train <- dfbin[train_ind, ]
+test <- dfbin[-train_ind, ]
+```
+
+#Binary prediction model
+```{r}
+#rerun the models on the training data
+fitbin2= glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=train,family="binomial")
+```
+
+```{r}
+pibintest= predict(fitbin2, type='response', newdata=test)
+```
+
+```{r}
+table(pibintest > 0.5, test$pass)
+```
+
+```{r}
+cost_misclass= function(yobs, ypred) {
+  err1= (ypred > 0.5) & (yobs==0)
+  err2= (ypred < 0.5) & (yobs==1)
+  ans= sum(err1 | err2) / length(yobs)
+  return(ans)
+}
+```
+
+```{r}
+misclas= c(cost_misclass(test$pass, pibintest))
+names(misclas)= c('model 1')
+misclas
+```
+Training-data misclassification as comparison
+```{r}
+pibin= predict(fitbin2, type='response')
+loss.insample= c(cost_misclass(train$pass, pibin))
+names(loss.insample)= c('model 1')
+loss.insample
+```
+Cross-validation
+```{r}
+fitbin2cv= cv.glm(dfbin, fitbin2, cost=cost_loglik_logistic, K=10)
+loss= c(fitbin2cv$delta[1])
+loss
+```
+
+
+#Clustering - First Plots
+```{r}
+ggplot(data=df, aes(G1,G2,color=pass))+
+  geom_point(position="jitter")+
+  geom_smooth()+
+  geom_abline(slope=1)+
+  coord_cartesian(xlim=c(0,20))
+```
+
+```{r}
+ggplot(data=df, aes(G1,G3,color=pass,scale))+
+  geom_point(position="jitter")+
+  geom_smooth()+
+  geom_abline(slope=1)+
+  coord_cartesian(xlim=c(0,20))
+```
+
+```{r}
+ggplot(data=df, aes(G2,G3,color=pass))+
+  geom_point(position="jitter")+
+  geom_smooth()+
+  geom_abline(slope=1)+
+  coord_cartesian(xlim=c(0,20))
+```
+
+#APPENDIX
+
+##LM-model check
+-->Models: fit1=bestBIC (fitall auch?)
+```{r}
+df$predl= predict(fit1)
+df$resl= residuals(fit1)
+```
+
+###Linearity
+```{r}
+ggplot(df, aes(predl, resl)) +
+  geom_point() +
+  geom_smooth() +
+  geom_abline(slope=0, intercept=0, col='gray') +
+  labs(x='Model prediction', y='Residuals')
+```
+###Constant residual variance
+```{r}
+ggplot(df, aes(x=predl, y=resl)) + 
+  geom_boxplot(mapping = aes(group = cut_width(predl, 0.2))) +
+  labs(x='Model prediction', y='Residuals')
+```
+###Error normality
+```{r}
+ggplot(df, aes(x=resl)) +
+  geom_histogram(aes(y= ..density..)) +
+  stat_overlay_normal_density(linetype = "dashed") +
+  labs(x='Residuals')
+```
+
+```{r}
+ggplot(df, aes(sample=scale(resl))) +
+  geom_qq() +
+  geom_abline(slope=1, intercept=0)
+```
+-->Errors are not normal and variance is not constant!!
+=>Apply robust standard errors
+
+##Poisson-check
+```{r}
+poires= mutate(df, pred= predict(fitallp), resdev= residuals(fitallp, type='deviance'), respearson= residuals(fitallp, type='pearson'))
+```
+
+```{r}
+ggplot(poires, aes(pred, respearson)) + geom_point() + geom_smooth() + labs(x='Predicted', y='Pearson residual')
+```
+
+```{r}
+poires2= mutate(poires, predcut= cut_number(pred, 10))
+ggplot(poires2, aes(x=predcut, y=respearson)) + geom_boxplot()
+```
+
+```{r}
+mean(poires$respearson)
+sd(poires$respearson)
+mean(df$G3)
+var(df$G3)
+```
+
+##Binomial check
+```{r}
+binres= mutate(df, pred= predict(fitbin), resdev= residuals(fitbin, type='deviance'), respearson= residuals(fitbin, type='pearson'))
+```
+
+```{r}
+ggplot(binres, aes(pred, respearson)) + geom_point() + geom_smooth() + labs(x='Predicted', y='Pearson residual')
+```
+Residuals seem roughly centered at zero
+
+Constant residual variance
+```{r}
+ggplot(binres, aes(x=pred, y=respearson)) + 
+  geom_boxplot(mapping = aes(group = cut_width(pred, 0.2))) +
+  labs(x='Model prediction', y='Residuals')
+```
