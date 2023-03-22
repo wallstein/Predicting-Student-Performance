@@ -15,7 +15,8 @@ Repository for the Final Project in Modern Statistical Computing by Jonas Wallst
 - [ ] portugaaaal angucken
 
 ## Struktur
-### Part I: Modell-Annahmen prüfen: IM WESENTLICH GEHT ES UM DIE LINEARE REGRESSION
+### Part I: Modell-Annahmen prüfen: 
+IM WESENTLICH GEHT ES UM DIE LINEARE REGRESSION
 
 - Grade regression: linear => error normality + constant variance NICHT GEGEBEN!!
 =>Robust standard errors
@@ -45,7 +46,6 @@ Prediction model: cross-validation and percent of mis-classification
 ## Data
 ### Variables
 see Student Performance.Rmd
->>>>>>> Stashed changes
 
 ### Additional note: 
 there are several (382) students that belong to both datasets . 
