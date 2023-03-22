@@ -52,11 +52,25 @@ dfnog <- select(mat, -c("G1", "G2"))
 fitallnog <- lm(G3~.,data=dfnog)
 summary(fitallnog)
 #bestBIC(G3~., data=dfnog)
+
+coef.fitallnog <- as_tibble(summary(fitallnog)$coeff, rownames = "variable") %>%
+  rename(p_value = 'Pr(>|t|)') %>%
+  filter(p_value < 0.05)
+
+# toselect.fitallnog <- summary(fitallnog)$coeff[,4]<0.05
+# # select sig. variables
+# relevant.fitallnog <- names(toselect.fitallnog)[toselect.fitallnog == TRUE]
+# relevant.summary.fitallnog <- summary(fitallnog)$coeff[toselect.fitallnog == TRUE]
+# # formula with only sig variables
+# sig.formula <- as.formula(paste("y ~",paste(relevant.fitallnog, collapse= "+")))
 ```
 
 #### Test table
 ```{r}
 export_summs(fitall, fitallnog, digits=4, error_format = "({p.value})", model.names = c("Full Linear model", "Full linear model without grades"), results = 'asis')
+```
+```{r}
+plot_summs(fitall, fitallnog, model.names = c("Full Linear model", "Full linear model without grades"))
 ```
 
 
