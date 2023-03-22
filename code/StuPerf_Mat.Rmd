@@ -12,7 +12,7 @@ por <- read.csv2('../data/student-por.csv')
 
 ```
 
-```{r, warning=FALSE}
+```{r}
 library(tidyverse)
 library(boot)
 library(coefplot)
