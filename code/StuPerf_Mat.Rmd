@@ -27,6 +27,7 @@ library(mgcv)
 library(ggpubr)
 library(huxtable)
 library(jtools)
+library(randomForest)
 ```
 
 ```{r}
@@ -70,7 +71,7 @@ coef.fitallnog <- as_tibble(summary(fitallnog)$coeff, rownames = "variable") %>%
 export_summs(fitall, fitallnog, digits=4, error_format = "({p.value})", model.names = c("Full Linear model", "Full linear model without grades"), results = 'asis')
 ```
 ```{r}
-plot_summs(fitall, fitallnog, model.names = c("Full Linear model", "Full linear model without grades"))
+plot_summs(fitall, fitallnog, model.names = c("Full Linear model", "linear without grades"))
 ```
 
 
@@ -81,11 +82,19 @@ fitallp <- glm(G3~.,data=mat, family=poisson())
 summary(fitallp)
 #bestBIC(G3~.,data=mat, family="poisson")
 ```
+```{r}
+plot_summs(fitall, fitallp, model.names = c("Full Linear model", "Full Poisson model"))
+```
+
 #### Full Poisson without grades
 ```{r}
 fitallpnog <- glm(G3~.,data=dfnog,family="poisson")
 summary(fitallpnog)
 ```
+```{r}
+plot_summs(fitallnog, fitallpnog, model.names = c("Full Linear model", "Full Poisson model"))
+```
+
 #### Quasipoisson - adjusting for overdispersion
 ```{r}
 fitallqp <- glm(G3~.,data=mat,family="quasipoisson")
@@ -102,7 +111,8 @@ summary(fitallqpnog)
 ```{r}
 df <- mat
 df$pass <- ifelse(df$G3>9, 1 ,0)
-dfbin <- select(df, -c("G3"))
+dfbin <- select(df, -c("G3")) 
+dfbin$pass <- as.factor(dfbin$pass)
 fitallb <- glm(pass~.,data=dfbin,family=binomial())
 summary(fitallb)
 #bestBIC(pass~.  ,data=dfbin, family="binomial")
@@ -205,8 +215,8 @@ For improvers
 
 ### 2.1 Training-Test Split
 ```{r}
-## 75% of the sample size
-smp_size <- floor(0.90 * nrow(dfbin))
+## 90% of the sample size
+smp_size <- floor(0.8 * nrow(dfbin))
 
 ## set the seed to make your partition reproducible
 set.seed(123)
@@ -252,12 +262,63 @@ table(pibin > 0.5, train$pass)
 ```{r}
 fitbin3= glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
 fitbin3cv= cv.glm(dfbin, fitbin3, cost=cost_loglik_logistic, K=10)
+#pibintestcv= predict(fitbin3cv, type='response')
 loss= sqrt(fitbin3cv$delta)
 loss
 
 ```
 - We should compare that to another model!
 
+### 2.3 Machine Learning prediction on pass/fail
+
+#### Random Forests with train/test split and model comparison
+```{r}
+rf_model <- randomForest(pass ~ Fedu+ famrel+ goout+ Walc+ G2, data = train, ntree = 4)
+tuneRF(train[, -33], train[, 33], stepFactor = 1.5, plot = TRUE)
+
+rf_pred_prob <- predict(rf_model, newdata = test,  type="prob")
+rf_pred <- rf_pred_prob[,2]
+table(rf_pred > 0.5, test$pass)
+misclas2= c(cost_misclass(test$pass, pibintest), cost_misclass(test$pass, rf_pred))
+names(misclas2)= c('glm - binomial','random forest')
+misclas2
+
+```
+#### Random forest with cross validation and model comparison
+```{r}
+library(caret)
+set.seed(123)
+rfcv_model <- train(pass ~ Fedu+ famrel+ goout+ Walc+ G2, data = train, method = "rf", trControl = trainControl(method = "cv", number = 10))
+rfcv_pred_prob <- predict(rfcv_model, newdata = test, type = "prob")
+rfcv_pred <- rfcv_pred_prob[,2]
+table(rfcv_pred > 0.5, test$pass)
+
+
+misclas3= c(cost_misclass(test$pass, pibintestcv), cost_misclass(test$pass, rf_pred), cost_misclass(test$pass, rfcv_pred))
+names(misclas3)= c('glm - binomial','random forest', 'random forest - cv')
+misclas3
+
+
+```
+
+#### Compare models with MSE
+```{r}
+pibintestx= predict(fitbin2, newdata=test, type = "response")
+test$pass <- as.numeric(test$pass)
+rf_pred_probx <- predict(rf_model, newdata = test, type = "prob")
+
+mse= c(sqrt(mean((test$pass - pibintest)^2)), sqrt(mean((test$pass - rf_pred_prob)^2)))
+     names(mse)= c('model 1','model rf')
+     round(mse, 5)
+     
+```
+
+
+
+
+
+ what if we change it by doing a binary distinction of students that improve?
+-> different than paper
 
 ## APPENDIX
 
