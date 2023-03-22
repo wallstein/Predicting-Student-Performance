@@ -134,4 +134,4 @@ dmypy.json
 .Rhistory
 
 # pdfs
-.pdf
+*.pdf
