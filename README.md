@@ -3,7 +3,7 @@ Repository for the Final Project in Modern Statistical Computing by Jonas Wallst
 
 ## Next ToDo
 ### Jonas
-- [ ] coefplot?
+- [x] coefplot?
 - [ ] table mit significant
 - [x] Rmd code in Reihenfolge bringen
 - [x] bestBIC raus
