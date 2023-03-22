@@ -134,4 +134,5 @@ dmypy.json
 .Rhistory
 
 # prevent pdfs from uploading
-.pdf
+*.pdf
+
