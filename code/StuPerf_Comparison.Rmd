@@ -1,0 +1,111 @@
+---
+title: "Final Project Modern Statistical Computing"
+author: "Martin Blasi and Jonas Wallstein"
+date: "2023-03-15"
+output: pdf_document
+---
+
+## Setup
+```{r}
+mat <- read.csv2('../data/student-mat.csv')
+por <- read.csv2('../data/student-por.csv')
+
+```
+
+```{r}
+library(tidyverse)
+library(boot)
+library(coefplot)
+library(modelr)
+library(openintro)
+library(brglm)
+library(mombf)
+library(pROC)
+library(keras)
+library(mlbench)
+library(mgcv)
+library(ggpubr)
+library(huxtable)
+library(jtools)
+library(randomForest)
+library(gridExtra)
+library(lmPerm)
+library(skimr)
+library(stargazer)
+```
+
+
+
+### 1.1 Linear Regression 
+#### Mat Full linear model 
+```{r}
+mat.fitall <- lm(G3~.,data=mat)
+summary(mat.fitall)
+bestBIC(G3~., data=mat)
+mat.fit1 <- lm(G3~age +famrel+ absences+ G1+ G2,data=mat)
+summary(mat.fit1)
+```
+
+#### Por Full linear model 
+```{r}
+por.fitall <- lm(G3~.,data=por)
+summary(por.fitall)
+bestBIC(G3~., data=por)
+por.fit1 <- lm(G3~G1+ G2,data=por)
+summary(por.fit1)
+```
+
+```{r}
+linear.models <- list(mat.fit1, por.fit1)
+stargazer(linear.models, title = "Linear Regression Models Comparison", 
+          column.labels = c("Mathematics", "Portugese"))
+```
+
+
+
+### 1.3 Binomial Regression
+#### Mat Pass/Fail Model
+```{r}
+df <- mat
+df$pass <- ifelse(df$G3>9, 1 ,0)
+dfbin <- select(df, -c("G3")) 
+
+#dfbin$pass <- as.factor(dfbin$pass)
+mat.fitallb <- glm(pass~.,data=dfbin,family=binomial())
+summary(mat.fitallb)
+bestBIC(pass~.  ,data=dfbin, family="binomial")
+mat.fitbin <- glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
+summary(mat.fitbin)
+
+```
+
+#### Por Pass/Fail Model
+```{r}
+df <- por
+df$pass <- ifelse(df$G3>9, 1 ,0)
+dfbin <- select(df, -c("G3")) 
+
+#dfbin$pass <- as.factor(dfbin$pass)
+por.fitallb <- glm(pass~.,data=dfbin,family=binomial())
+summary(por.fitallb)
+bestBIC(pass~.  ,data=dfbin, family="binomial")
+por.fitbin <- glm(pass~G1+ G2,data=dfbin,family="binomial")
+summary(por.fitbin)
+
+```
+
+
+```{r}
+bin.models <- list(mat.fitbin, por.fitbin)
+stargazer(bin.models, title = "Binomial Regression Models Comparison", 
+          column.labels = c("Mathematics", "Portugese"))
+```
+
+
+
+
+<!-- ```{r} -->
+<!-- export_summs(fitall, fitallnog, digits=4, error_format = "({p.value})", model.names = c("Full Linear model", "Full linear model without grades"), results = 'asis') -->
+<!-- ``` -->
+
+
