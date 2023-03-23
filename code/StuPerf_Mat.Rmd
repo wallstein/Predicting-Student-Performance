@@ -9,7 +9,7 @@ output: pdf_document
 ```{r}
 mat <- read.csv2('../data/student-mat.csv')
 por <- read.csv2('../data/student-por.csv')
-
+df <- mat
 ```
 
 ```{r}
@@ -37,6 +37,20 @@ library(skimr)
 source('routines.R')
 ```
 
+##0. Descriptive Analysis
+###Histograms
+```{r}
+p1<- ggplot(df, aes(famrel)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Family relations")
+p2<- ggplot(df, aes(df$studytime)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Study time")
+p3<- ggplot(df, aes(df$failures)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Past class failures")
+p4<- ggplot(df, aes(df$goout)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Going out scale")
+p5<- ggplot(df, aes(df$Walc)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Weekend alcohol")
+p6<- ggplot(df, aes(df$absences)) + geom_histogram(binwidth=2,color="darkblue",fill="darkblue")+labs(x="Abscences")
+p7<- ggplot(df, aes(df$G1)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="First period grade")
+p8<- ggplot(df, aes(df$G2)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="Second period grade")
+p9<- ggplot(df, aes(df$G3)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="Final grade")
+grid.arrange(p1, p2, p3, p4,p5,p6, p7, p8, p9, ncol=3)
+```
 
 ## 1. Explaining
 ### 1.1 Linear Regression 
