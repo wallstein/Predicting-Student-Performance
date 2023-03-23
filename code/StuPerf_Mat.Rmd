@@ -1,0 +1,645 @@
+---
+title: "Final Project Modern Statistical Computing"
+author: "Martin Blasi and Jonas Wallstein"
+date: "2023-03-15"
+output: pdf_document
+---
+
+## Setup
+```{r}
+mat <- read.csv2('../data/student-mat.csv')
+por <- read.csv2('../data/student-por.csv')
+
+```
+
+```{r}
+library(tidyverse)
+library(boot)
+library(coefplot)
+library(modelr)
+library(openintro)
+library(brglm)
+library(mombf)
+library(pROC)
+library(keras)
+library(mlbench)
+library(mgcv)
+library(ggpubr)
+library(huxtable)
+library(jtools)
+library(randomForest)
+library(lmPerm)
+library(gridExtra)
+```
+
+```{r}
+source('routines.R')
+```
+
+##0. Descriptive Analysis
+###Histograms
+```{r}
+p1<- ggplot(df, aes(famrel)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Family relations")
+p2<- ggplot(df, aes(df$studytime)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Study time")
+p3<- ggplot(df, aes(df$failures)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Past class failures")
+p4<- ggplot(df, aes(df$goout)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Going out scale")
+p5<- ggplot(df, aes(df$Walc)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Weekend alcohol")
+p6<- ggplot(df, aes(df$absences)) + geom_histogram(binwidth=2,color="darkblue",fill="darkblue")+labs(x="Abscences")
+p7<- ggplot(df, aes(df$G1)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="First period grade")
+p8<- ggplot(df, aes(df$G2)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="Second period grade")
+p9<- ggplot(df, aes(df$G3)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="Final grade")
+grid.arrange(p1, p2, p3, p4,p5,p6, p7, p8, p9, ncol=3)
+```
+
+## 1. Explaining
+### 1.1 Linear Regression 
+#### Full linear model
+```{r}
+fitall <- lm(G3~.,data=mat)
+summary(fitall)
+bestBIC(G3~., data=mat)
+fit1 <- lm(G3~age +famrel+ absences+ G1+ G2,data=mat)
+summary(fit1)
+
+```
+
+#### Full linear model without grades
+```{r}
+dfnog <- select(mat, -c("G1", "G2"))
+fitallnog <- lm(G3~.,data=dfnog)
+summary(fitallnog)
+#bestBIC(G3~., data=dfnog)
+
+coef.fitallnog <- as_tibble(summary(fitallnog)$coeff, rownames = "variable") %>%
+  rename(p_value = 'Pr(>|t|)') %>%
+  filter(p_value < 0.05)
+
+# toselect.fitallnog <- summary(fitallnog)$coeff[,4]<0.05
+# # select sig. variables
+# relevant.fitallnog <- names(toselect.fitallnog)[toselect.fitallnog == TRUE]
+# relevant.summary.fitallnog <- summary(fitallnog)$coeff[toselect.fitallnog == TRUE]
+# # formula with only sig variables
+# sig.formula <- as.formula(paste("y ~",paste(relevant.fitallnog, collapse= "+")))
+```
+
+#### Test table
+```{r}
+export_summs(fitall, fitallnog, digits=4, error_format = "({p.value})", model.names = c("Full Linear model", "Full linear model without grades"), results = 'asis')
+```
+```{r}
+plot_summs(fitall, fitallnog, model.names = c("Full Linear model", "linear without grades"))
+```
+
+
+### 1.2 Poisson Regression
+#### Full Poisson
+```{r}
+fitallp <- glm(G3~.,data=mat, family=poisson())
+summary(fitallp)
+#bestBIC(G3~.,data=mat, family="poisson")
+```
+```{r}
+plot_summs(fitall, fitallp, model.names = c("Full Linear model", "Full Poisson model"))
+```
+
+#### Full Poisson without grades
+```{r}
+fitallpnog <- glm(G3~.,data=dfnog,family="poisson")
+summary(fitallpnog)
+```
+```{r}
+plot_summs(fitallnog, fitallpnog, model.names = c("Full Linear model", "Full Poisson model"))
+```
+
+#### Quasipoisson - adjusting for overdispersion
+```{r}
+fitallqp <- glm(G3~.,data=mat,family="quasipoisson")
+summary(fitallqp)
+```
+#### Quasipoisson without grades
+```{r}
+fitallqpnog <- glm(G3~.,data=dfnog,family="quasipoisson")
+summary(fitallqpnog)
+```
+
+### 1.3 Binomial Regression
+#### Pass/Fail Model
+```{r}
+df <- mat
+df$pass <- ifelse(df$G3>9, 1 ,0)
+dfbin <- select(df, -c("G3")) 
+#dfbin$pass <- as.factor(dfbin$pass)
+fitallb <- glm(pass~.,data=dfbin,family=binomial())
+summary(fitallb)
+bestBIC(pass~.  ,data=dfbin, family="binomial")
+fitbin <- glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
+summary(fitbin)
+```
+
+#### Optional: Gradelevels
+```{r}
+# df$gradelevel <- cut(df$G3, breaks=c(0,9,11,13,15,20), labels=c("Fail", "Sufficient", "Satisfactory", "Good", "Excellent"))
+# df$gradecat <- cut(df$G3, breaks=c(0,9,11,13,15,20), labels=c(0,1,2,3,4))
+# dfless2 <- select(dfless, -c("gradelevel"))
+# fitcatall <- glm(gradecat~.,data=dfless2,family=poisson())
+# summary(fitcatall)
+```
+
+### 1.4 Sub-sample analysis of passing/failing students
+#### Sub-sample analysis of students who pass
+```{r}
+dfpass <- subset(df,pass==1)
+#dfpass <- select(dfpass, -c("pass", "resl", "resbn", "predl"))
+dffail <- subset(df, pass==0)
+#dffail <- select(dffail, -c("pass", "resl", "resbn", "predl"))
+fitallpass <- lm(G3~.,data=dfpass)
+summary(fitallpass)
+#bestBIC(G3~., data=dfpass)
+```
+--> age, absences and G1 out
+-->rather consider significant effects in full model than bestBIC?
+-->R^2 over 90%
+
+#### Sub-sample analysis of students who fail
+```{r}
+fitallfail <- lm(G3~.,data=dffail)
+summary(fitallfail)
+#bestBIC(G3~.,data=dffail)
+```
+-->also absences and previous performance
+-->R^2 much lower though (close to 60%)
+
+### 1.5 Grade difference
+What students have improved their grades over the course of the year? What role did support from the family/school play?
+
+#### Creating dataframe
+```{r}
+df.diff <- df %>% 
+  mutate(gradediff13 = G3 - G1) %>% 
+  select(-c("G1", "G2", "G3", "pass")) %>% 
+  mutate(improvement = ifelse(gradediff13 >= 0, 1, 0))
+```
+
+#### Linear regression on grade difference
+```{r}
+fitdiff1 <- lm(gradediff13 ~ ., data = df.diff)
+summary(fitdiff1)
+bestBIC(gradediff13 ~. , data = df.diff)
+```
+
+#### Binomial regression: improvement yes/no
+```{r}
+fitdiff2 <- glm(improvement ~ . -gradediff13, data = df.diff, family = "binomial")
+summary(fitdiff2)
+bestBIC(improvement ~. -gradediff13, data = df.diff)
+
+```
+- failures,  romantic relationships and absences seem to be important factors.
+- Interestingly, no type of support has a significant effect, are there heterogeneous effects and reverse causality? Can we test that somehow?
+- With binary outcome improvement yes/no absences and resonother seem important, although bestBIC suggests only age as predictor
+- If improvement is relaxed to >= 0 instead of >0, paidyes becomes significant and positive -> interesting!
+
+#### Plots
+```{r}
+table(df.diff$improvement)
+
+library(ggpubr)
+ggplot(data = df.diff, aes(x = gradediff13)) + 
+  geom_histogram(aes(y = ..density..)) + 
+  stat_overlay_normal_density(linetype = "dashed")
+```
+
+### 1.6 Subsample analysis of students that improved vs. those that did not
+```{r}
+df.posdiff <- subset(df.diff, improvement == 1)
+fitdiff3 <- glm(gradediff13 ~ . -improvement, data = df.posdiff)
+summary(fitdiff3)
+#bestBIC(gradediff13 ~. - improvement, data = df.posdiff)
+
+df.negdiff <- subset(df.diff, improvement == 0)
+fitdiff4 <- glm(gradediff13 ~ . -improvement, data = df.negdiff)
+summary(fitdiff4)
+#bestBIC(gradediff13 ~. - improvement, data = df.negdiff)
+#fitdiff5 <- glm(gradediff13 ~ school + age + traveltime + failures + romantic + Walc + absences, data = df.negdiff)
+#summary(fitdiff5)
+```
+-> mean-center it?
+For improvers
+
+## 2. Prediction model
+-->for full linear model and the binary case
+
+### 2.1 Training-Test Split
+```{r}
+## 90% of the sample size
+smp_size <- floor(0.8 * nrow(dfbin))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(dfbin)), size = smp_size)
+
+train <- dfbin[train_ind, ]
+test <- dfbin[-train_ind, ]
+```
+
+#### Rerun the models on the training data
+```{r}
+fitbin2= glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=train,family="binomial")
+```
+
+#### Make predictions on test data
+```{r}
+pibintest= predict(fitbin2, type='response', newdata=test)
+table(pibintest > 0.5, test$pass)
+```
+
+#### Assess mis-classification in test data
+```{r}
+cost_misclass= function(yobs, ypred) {
+  err1= (ypred > 0.5) & (yobs==0)
+  err2= (ypred < 0.5) & (yobs==1)
+  ans= sum(err1 | err2) / length(yobs)
+  return(ans)
+}
+misclas= c(cost_misclass(test$pass, pibintest))
+names(misclas)= c('model 1')
+misclas
+```
+#### Compare to misclassification in training data 
+```{r}
+pibin= predict(fitbin2, type='response', data = train) # data??
+loss.insample= c(cost_misclass(train$pass, pibin))
+names(loss.insample)= c('model 1')
+loss.insample
+table(pibin > 0.5, train$pass)
+```
+
+### 2.2 Cross-validation
+```{r}
+fitbin3= glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
+fitbin3cv= cv.glm(dfbin, fitbin3, cost=cost_loglik_logistic, K=10)
+loss= sqrt(fitbin3cv$delta)
+```
+
+### 2.3 Machine Learning prediction on pass/fail
+
+#### Random Forests with train/test split and model comparison
+```{r}
+rf_model <- randomForest(pass ~ Fedu+ famrel+ goout+ Walc+ G2, data = train, ntree = 4)
+tuneRF(train[, -33], train[, 33], stepFactor = 1.5, plot = TRUE)
+
+rf_pred_prob <- predict(rf_model, newdata = test,  type="prob")
+rf_pred <- rf_pred_prob[,2]
+table(rf_pred > 0.5, test$pass)
+misclas2= c(cost_misclass(test$pass, pibintest), cost_misclass(test$pass, rf_pred))
+names(misclas2)= c('glm - binomial','random forest')
+round(misclas2, 3)
+
+```
+#### Random forest with cross validation and model comparison
+```{r}
+library(caret)
+set.seed(123)
+rfcv_model <- train(pass ~ Fedu+ famrel+ goout+ Walc+ G2, data = dfbin, method = "rf", trControl = trainControl(method = "cv", number = 10))
+rfcv_pred <- predict(rfcv_model, dfbin, type = "prob")
+rfcv_pred <- rfcv_pred[,2]
+
+rmse= c(loss[2], sqrt(mean((rfcv_pred - as.numeric(dfbin$pass))^2)))
+names(rmse)= c('Binomial', 'Random Forest')
+round(rmse, 3)
+
+```
+
+#### Compare models with MSE
+```{r}
+pibintestx= predict(fitbin2, newdata=test, type = "response")
+test$pass <- as.numeric(test$pass)
+rf_pred_probx <- predict(rf_model, newdata = test, type = "prob")
+
+mse= c(sqrt(mean((test$pass - pibintest)^2)), sqrt(mean((test$pass - rf_pred_prob)^2)))
+     names(mse)= c('model 1','model rf')
+     round(mse, 5)
+     
+```
+
+
+## APPENDIX
+
+### A.1 Validating Assumptions
+
+#### A.1.1 LM-model check
+Compare CIs to bootstrapped CIs
+```{r}
+f=formula(G3~age+ famrel+ absences+ G1+ G2 )
+bhat= function(data, indices=1:nrow(data), formula) {
+  fit= lm(formula, data=data[indices,])
+  return(coef(fit))
+}
+round(bhat(mat, formula=f), 3)
+```
+
+```{r}
+bhat.fit= boot(mat, statistic=bhat, R=2000, formula=f)
+dim(bhat.fit$t)
+round(bhat.fit$t,3)[1:5,] #show first five bootstrap samples
+```
+
+```{r}
+round(bhat.fit$t0, 3)
+```
+
+```{r}
+colnames(bhat.fit$t)= names(bhat.fit$t0)
+bhat.boot= as_tibble(bhat.fit$t)
+bhat.boot
+```
+
+```{r}
+bhat.bootlong= pivot_longer(bhat.boot, cols= names(bhat.boot), names_to="variable", values_to="bootstrap_value")
+bhat.bootlong
+```
+
+```{r}
+ggplot(bhat.bootlong, aes(x=bootstrap_value)) +
+  geom_histogram(aes(y= ..density..)) +
+  stat_overlay_normal_density(linetype='dashed') +
+  facet_wrap(~ variable, scales="free")
+```
+
+```{r}
+#map_df gets quantiles for all columns, returns a data frame (tibble)
+bhat.ci= map_df(bhat.boot, quantile, probs=c(0.025,0.975), na.rm=TRUE)
+bhat.ci= cbind(varname= names(bhat.boot), bhat.ci) 
+bhat.ci
+```
+
+```{r}
+coefSummary(fit1)
+```
+```{r}
+#| code-fold: true
+yvals= 1:length(coef(fit1))
+ci= cbind(bhat.ci, confint(fit1), y.ols=yvals, y.boot=yvals+.1)
+names(ci)= c('varname','low.boot','high.boot','low.ols','high.ols','y.ols','y.boot')
+ggplot(ci) + 
+  geom_segment(aes(x=low.ols,xend=high.ols,y=y.ols,yend=y.ols)) +
+  geom_segment(aes(x=low.boot,xend=high.boot,y=y.boot,yend=y.boot), color='red') +
+  geom_text(aes(x=low.ols, y=y.ols, label=varname), nudge_y = 0.3) +
+  labs(x='Confidence interval', y='') +
+  theme(axis.text.y=element_blank(),  axis.ticks.y=element_blank()) #remove y axis labels 
+```
+
+Compare coef to permutation test
+```{r}
+fitperm1 <- lmp(G3~age +famrel+ absences+ G1+ G2,data=mat)
+summary(fitperm1)
+summary(fit1)
+```
+-->Models: fit1=bestBIC (fitall auch?)
+```{r}
+df$predl= predict(fitall)
+df$resl= residuals(fitall)
+```
+
+Linearity
+```{r}
+ggplot(df, aes(predl, resl)) +
+  geom_point() +
+  geom_smooth() +
+  geom_abline(slope=0, intercept=0, col='gray') +
+  labs(x='Model prediction', y='Residuals')
+```
+Constant residual variance
+```{r}
+ggplot(df, aes(x=predl, y=resl)) + 
+  geom_boxplot(mapping = aes(group = cut_width(predl, 0.2))) +
+  labs(x='Model prediction', y='Residuals')
+```
+Error normality
+```{r}
+ggplot(df, aes(x=resl)) +
+  geom_histogram(aes(y= ..density..)) +
+  stat_overlay_normal_density(linetype = "dashed") +
+  labs(x='Residuals')
+```
+
+```{r}
+ggplot(df, aes(sample=scale(resl))) +
+  geom_qq() +
+  geom_abline(slope=1, intercept=0)
+```
+-->Errors are not normal and variance is not constant!!
+=>Apply robust standard errors
+
+#### A.1.2 Poisson-check
+Compare CI to bootstrapped CIs
+```{r}
+fitpoi <- glm(G3~failures+ schoolsup+ famrel+ absences+ G1+ G2,family=poisson(),mat)
+#formula considering the coef that were at least significant on 10% level in full model
+f=formula(G3~failures+ schoolsup+ famrel+ absences+ G1+ G2,family=poisson() )
+bhat= function(data, indices=1:nrow(data), formula) {
+  fit= lm(formula, data=data[indices,])
+  return(coef(fit))
+}
+round(bhat(mat, formula=f), 3)
+```
+
+```{r}
+bhat.fit= boot(mat, statistic=bhat, R=2000, formula=f)
+dim(bhat.fit$t)
+round(bhat.fit$t,3)[1:5,] #show first five bootstrap samples
+```
+
+```{r}
+round(bhat.fit$t0, 3)
+```
+
+```{r}
+colnames(bhat.fit$t)= names(bhat.fit$t0)
+bhat.boot= as_tibble(bhat.fit$t)
+bhat.boot
+```
+
+```{r}
+bhat.bootlong= pivot_longer(bhat.boot, cols= names(bhat.boot), names_to="variable", values_to="bootstrap_value")
+bhat.bootlong
+```
+
+```{r}
+ggplot(bhat.bootlong, aes(x=bootstrap_value)) +
+  geom_histogram(aes(y= ..density..)) +
+  stat_overlay_normal_density(linetype='dashed') +
+  facet_wrap(~ variable, scales="free")
+```
+
+```{r}
+#map_df gets quantiles for all columns, returns a data frame (tibble)
+bhat.ci= map_df(bhat.boot, quantile, probs=c(0.025,0.975), na.rm=TRUE)
+bhat.ci= cbind(varname= names(bhat.boot), bhat.ci) 
+bhat.ci
+```
+
+```{r}
+coefSummary(fitpoi)
+```
+
+```{r}
+#| code-fold: true
+yvals= 1:length(coef(fitpoi))
+ci= cbind(bhat.ci, confint(fitpoi), y.ols=yvals, y.boot=yvals+.1)
+names(ci)= c('varname','low.boot','high.boot','low.ols','high.ols','y.ols','y.boot')
+ggplot(ci) + 
+  geom_segment(aes(x=low.ols,xend=high.ols,y=y.ols,yend=y.ols)) +
+  geom_segment(aes(x=low.boot,xend=high.boot,y=y.boot,yend=y.boot), color='red') +
+  geom_text(aes(x=low.ols, y=y.ols, label=varname), nudge_y = 0.3) +
+  labs(x='Confidence interval', y='') +
+  theme(axis.text.y=element_blank(),  axis.ticks.y=element_blank()) #remove y axis labels 
+```
+
+Compare coef to permutation test
+```{r}
+fitperm2 <- lmp(G3~failures+ schoolsup+ famrel+ absences+ G1+ G2,family=poisson(),mat)
+summary(fitperm2)
+summary(fitpoi)
+```
+
+```{r}
+poires= mutate(df, pred= predict(fitallp), resdev= residuals(fitallp, type='deviance'), respearson= residuals(fitallp, type='pearson'))
+```
+
+```{r}
+ggplot(poires, aes(pred, respearson)) + geom_point() + geom_smooth() + labs(x='Predicted', y='Pearson residual')
+```
+
+```{r}
+poires2= mutate(poires, predcut= cut_number(pred, 10))
+ggplot(poires2, aes(x=predcut, y=respearson)) + geom_boxplot()
+```
+
+```{r}
+mean(poires$respearson)
+sd(poires$respearson)
+mean(df$G3)
+var(df$G3)
+```
+=>Huge overdispersion and variance not constant, errors not normal
+
+Error normality?
+```{r}
+# ggplot(poires, aes(x=respearson)) +
+#   geom_histogram(aes(y= ..density..)) +
+#   stat_overlay_normal_density(linetype = "dashed") +
+#   labs(x='Residuals')
+# ggplot(poires, aes(sample=scale(respearson))) +
+#   geom_qq() +
+#   geom_abline(slope=1, intercept=0)
+```
+
+#### A.1.3 Binomial check
+Compare CIs to bootstrapped CIs
+```{r}
+f=formula(pass~Fedu+ famrel+ goout+ Walc+ G2,family="binomial")
+bhat= function(data, indices=1:nrow(data), formula) {
+  fit= lm(formula, data=data[indices,])
+  return(coef(fit))
+}
+round(bhat(dfbin, formula=f), 3)
+```
+
+```{r}
+bhat.fit= boot(dfbin, statistic=bhat, R=2000, formula=f)
+dim(bhat.fit$t)
+round(bhat.fit$t,3)[1:5,] #show first five bootstrap samples
+```
+
+```{r}
+round(bhat.fit$t0, 3)
+```
+
+```{r}
+colnames(bhat.fit$t)= names(bhat.fit$t0)
+bhat.boot= as_tibble(bhat.fit$t)
+bhat.boot
+```
+
+```{r}
+bhat.bootlong= pivot_longer(bhat.boot, cols= names(bhat.boot), names_to="variable", values_to="bootstrap_value")
+bhat.bootlong
+```
+
+```{r}
+ggplot(bhat.bootlong, aes(x=bootstrap_value)) +
+  geom_histogram(aes(y= ..density..)) +
+  stat_overlay_normal_density(linetype='dashed') +
+  facet_wrap(~ variable, scales="free")
+```
+
+```{r}
+#map_df gets quantiles for all columns, returns a data frame (tibble)
+bhat.ci= map_df(bhat.boot, quantile, probs=c(0.025,0.975), na.rm=TRUE)
+bhat.ci= cbind(varname= names(bhat.boot), bhat.ci) 
+bhat.ci
+```
+
+```{r}
+coefSummary(fitbin)
+```
+
+```{r}
+#| code-fold: true
+yvals= 1:length(coef(fitbin))
+ci= cbind(bhat.ci, confint(fitbin), y.ols=yvals, y.boot=yvals+.1)
+names(ci)= c('varname','low.boot','high.boot','low.ols','high.ols','y.ols','y.boot')
+ggplot(ci) + 
+  geom_segment(aes(x=low.ols,xend=high.ols,y=y.ols,yend=y.ols)) +
+  geom_segment(aes(x=low.boot,xend=high.boot,y=y.boot,yend=y.boot), color='red') +
+  geom_text(aes(x=low.ols, y=y.ols, label=varname), nudge_y = 0.3) +
+  labs(x='Confidence interval', y='') +
+  theme(axis.text.y=element_blank(),  axis.ticks.y=element_blank()) #remove y axis labels 
+```
+
+Compare coef to permutation test
+```{r}
+fitperm3 <- lmp(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
+summary(fitperm3)
+summary(fitbin)
+```
+
+```{r}
+binres= mutate(df, pred= predict(fitallb), resdev= residuals(fitallb, type='deviance'), respearson= residuals(fitallb, type='pearson'))
+```
+
+```{r}
+ggplot(binres, aes(pred, respearson)) + geom_point() + geom_smooth() + labs(x='Predicted', y='Pearson residual')
+```
+Residuals seem roughly centered at zero
+
+Constant residual variance
+```{r}
+ggplot(binres, aes(x=pred, y=respearson)) + 
+  geom_boxplot(mapping = aes(group = cut_width(pred, 0.2))) +
+  labs(x='Model prediction', y='Residuals')
+```
+
+### A.2 Grade difference Plots
+```{r}
+ggplot(data=df, aes(G1,G2,color=pass))+
+  geom_point(position="jitter")+
+  geom_smooth()+
+  geom_abline(slope=1)+
+  coord_cartesian(xlim=c(0,20))
+```
+```{r}
+ggplot(data=df, aes(G1,G3,color=pass,scale))+
+  geom_point(position="jitter")+
+  geom_smooth()+
+  geom_abline(slope=1)+
+  coord_cartesian(xlim=c(0,20))
+```
+```{r}
+ggplot(data=df, aes(G2,G3,color=pass))+
+  geom_point(position="jitter")+
+  geom_smooth()+
+  geom_abline(slope=1)+
+  coord_cartesian(xlim=c(0,20))
+```
