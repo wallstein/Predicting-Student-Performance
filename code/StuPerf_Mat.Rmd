@@ -226,6 +226,7 @@ smp_size <- floor(0.8 * nrow(dfbin))
 set.seed(123)
 train_ind <- sample(seq_len(nrow(dfbin)), size = smp_size)
 
+dfbin$pass <- as.factor(dfbin$pass)
 train <- dfbin[train_ind, ]
 test <- dfbin[-train_ind, ]
 ```
@@ -302,11 +303,15 @@ round(rmse, 3)
 
 #### Compare models with MSE
 ```{r}
-pibintestx= predict(fitbin2, newdata=dfbin, type = "response")
-test$pass <- as.numeric(test$pass)
-rf_pred_probx <- predict(rf_model, newdata = dfbin, type = "prob")
 
-mse= c(sqrt(mean((test$pass - pibintestx)^2)), sqrt(mean((test$pass - rf_pred_probx)^2)))
+pibintestx= predict(fitbin2, newdata=test, type = "response")
+test$pass <- as.numeric(test$pass)
+rf_pred_probx <- predict(rf_model, newdata = test, type = "prob")
+
+# pibintestx= predict(fitbin2, newdata=dfbin, type = "response")
+# test$pass <- as.numeric(test$pass)
+
+mse= c(sqrt(mean((test$pass - pibintest)^2)), sqrt(mean((test$pass - rf_pred_probx)^2)))
      names(mse)= c('Binomial Model', 'Random Forest')
      round(mse, 5)
      
@@ -339,6 +344,7 @@ grid.arrange(p)
 #### A.1.1 LM-model check
 Compare CIs to bootstrapped CIs
 ```{r}
+dfbin$pass <- as.numeric(dfbin$pass)
 f=formula(G3~age+ famrel+ absences+ G1+ G2 )
 bhat= function(data, indices=1:nrow(data), formula) {
   fit= lm(formula, data=data[indices,])
