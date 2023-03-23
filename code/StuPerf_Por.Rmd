@@ -39,17 +39,17 @@ source('routines.R')
 ### 1.1 Linear Regression 
 #### Full linear model
 ```{r}
-fitall <- lm(G3~.,data=mat)
+fitall <- lm(G3~.,data=por)
 summary(fitall)
-# bestBIC(G3~., data=mat)
-# fit1 <- lm(G3~age +famrel+ absences+ G1+ G2,data=mat)
+# bestBIC(G3~., data=por)
+# fit1 <- lm(G3~age +famrel+ absences+ G1+ G2,data=por)
 # summary(fit1)
 
 ```
 
 #### Full linear model without grades
 ```{r}
-dfnog <- select(mat, -c("G1", "G2"))
+dfnog <- select(por, -c("G1", "G2"))
 fitallnog <- lm(G3~.,data=dfnog)
 summary(fitallnog)
 #bestBIC(G3~., data=dfnog)
@@ -78,9 +78,9 @@ plot_summs(fitall, fitallnog, model.names = c("Full Linear model", "linear witho
 ### 1.2 Poisson Regression
 #### Full Poisson
 ```{r}
-fitallp <- glm(G3~.,data=mat, family=poisson())
+fitallp <- glm(G3~.,data=por, family=poisson())
 summary(fitallp)
-#bestBIC(G3~.,data=mat, family="poisson")
+#bestBIC(G3~.,data=por, family="poisson")
 ```
 ```{r}
 plot_summs(fitall, fitallp, model.names = c("Full Linear model", "Full Poisson model"))
@@ -97,7 +97,7 @@ plot_summs(fitallnog, fitallpnog, model.names = c("Full Linear model", "Full Poi
 
 #### Quasipoisson - adjusting for overdispersion
 ```{r}
-fitallqp <- glm(G3~.,data=mat,family="quasipoisson")
+fitallqp <- glm(G3~.,data=por,family="quasipoisson")
 summary(fitallqp)
 ```
 #### Quasipoisson without grades
@@ -109,7 +109,7 @@ summary(fitallqpnog)
 ### 1.3 Binomial Regression
 #### Pass/Fail Model
 ```{r}
-df <- mat
+df <- por
 df$pass <- ifelse(df$G3>9, 1 ,0)
 dfbin <- select(df, -c("G3")) 
 dfbin$pass <- as.factor(dfbin$pass)
