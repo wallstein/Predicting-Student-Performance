@@ -28,6 +28,7 @@ library(ggpubr)
 library(huxtable)
 library(jtools)
 library(randomForest)
+library(gridExtra)
 library(lmPerm)
 ```
 
@@ -113,12 +114,14 @@ summary(fitallqpnog)
 df <- mat
 df$pass <- ifelse(df$G3>9, 1 ,0)
 dfbin <- select(df, -c("G3")) 
+
 #dfbin$pass <- as.factor(dfbin$pass)
 fitallb <- glm(pass~.,data=dfbin,family=binomial())
 summary(fitallb)
 bestBIC(pass~.  ,data=dfbin, family="binomial")
 fitbin <- glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
 summary(fitbin)
+
 ```
 
 #### Optional: Gradelevels
@@ -264,6 +267,7 @@ table(pibin > 0.5, train$pass)
 fitbin3= glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
 fitbin3cv= cv.glm(dfbin, fitbin3, cost=cost_loglik_logistic, K=10)
 loss= sqrt(fitbin3cv$delta)
+loss
 ```
 
 ### 2.3 Machine Learning prediction on pass/fail
@@ -277,7 +281,7 @@ rf_pred_prob <- predict(rf_model, newdata = test,  type="prob")
 rf_pred <- rf_pred_prob[,2]
 table(rf_pred > 0.5, test$pass)
 misclas2= c(cost_misclass(test$pass, pibintest), cost_misclass(test$pass, rf_pred))
-names(misclas2)= c('glm - binomial','random forest')
+names(misclas2)= c('Binomial', 'Random Forest')
 round(misclas2, 3)
 
 ```
@@ -293,18 +297,38 @@ rmse= c(loss[2], sqrt(mean((rfcv_pred - as.numeric(dfbin$pass))^2)))
 names(rmse)= c('Binomial', 'Random Forest')
 round(rmse, 3)
 
+##dfbin$pass <- as.factor(dfbin$pass)
 ```
 
 #### Compare models with MSE
 ```{r}
-pibintestx= predict(fitbin2, newdata=test, type = "response")
+pibintestx= predict(fitbin2, newdata=dfbin, type = "response")
 test$pass <- as.numeric(test$pass)
-rf_pred_probx <- predict(rf_model, newdata = test, type = "prob")
+rf_pred_probx <- predict(rf_model, newdata = dfbin, type = "prob")
 
-mse= c(sqrt(mean((test$pass - pibintest)^2)), sqrt(mean((test$pass - rf_pred_prob)^2)))
-     names(mse)= c('model 1','model rf')
+mse= c(sqrt(mean((test$pass - pibintestx)^2)), sqrt(mean((test$pass - rf_pred_probx)^2)))
+     names(mse)= c('Binomial Model', 'Random Forest')
      round(mse, 5)
      
+mod.comp <- rbind(round(misclas2, 3), round(mse, 3))
+rownames(mod.comp) = c("Share of Misclassifications", "Root Mean Squared Error")
+mod.comp
+
+
+
+#png("model_comparison.png")
+p<-tableGrob(mod.comp)
+p$widths <- unit(rep(1/ncol(p), ncol(p)), "npc")
+grid.arrange(p)
+#dev.off()
+# p$widths <- unit(rep(1/ncol(p), ncol(p)), "npc")
+# p$heights <- unit(200, "null")
+# grid.arrange(top = "Title", p)
+
+
+# library(DT)
+# datatable(mod.comp, extensions = 'Buttons', options = list(dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print')))
+
 ```
 
 
