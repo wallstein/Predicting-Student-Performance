@@ -28,6 +28,7 @@ library(ggpubr)
 library(huxtable)
 library(jtools)
 library(randomForest)
+library(lmPerm)
 ```
 
 ```{r}
@@ -41,9 +42,9 @@ source('routines.R')
 ```{r}
 fitall <- lm(G3~.,data=mat)
 summary(fitall)
-# bestBIC(G3~., data=mat)
-# fit1 <- lm(G3~age +famrel+ absences+ G1+ G2,data=mat)
-# summary(fit1)
+bestBIC(G3~., data=mat)
+fit1 <- lm(G3~age +famrel+ absences+ G1+ G2,data=mat)
+summary(fit1)
 
 ```
 
@@ -112,12 +113,12 @@ summary(fitallqpnog)
 df <- mat
 df$pass <- ifelse(df$G3>9, 1 ,0)
 dfbin <- select(df, -c("G3")) 
-dfbin$pass <- as.factor(dfbin$pass)
+#dfbin$pass <- as.factor(dfbin$pass)
 fitallb <- glm(pass~.,data=dfbin,family=binomial())
 summary(fitallb)
-#bestBIC(pass~.  ,data=dfbin, family="binomial")
-#fitbin <- glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
-#summary(fitbin)
+bestBIC(pass~.  ,data=dfbin, family="binomial")
+fitbin <- glm(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
+summary(fitbin)
 ```
 
 #### Optional: Gradelevels
@@ -312,6 +313,73 @@ mse= c(sqrt(mean((test$pass - pibintest)^2)), sqrt(mean((test$pass - rf_pred_pro
 ### A.1 Validating Assumptions
 
 #### A.1.1 LM-model check
+Compare CIs to bootstrapped CIs
+```{r}
+f=formula(G3~age+ famrel+ absences+ G1+ G2 )
+bhat= function(data, indices=1:nrow(data), formula) {
+  fit= lm(formula, data=data[indices,])
+  return(coef(fit))
+}
+round(bhat(mat, formula=f), 3)
+```
+
+```{r}
+bhat.fit= boot(mat, statistic=bhat, R=2000, formula=f)
+dim(bhat.fit$t)
+round(bhat.fit$t,3)[1:5,] #show first five bootstrap samples
+```
+
+```{r}
+round(bhat.fit$t0, 3)
+```
+
+```{r}
+colnames(bhat.fit$t)= names(bhat.fit$t0)
+bhat.boot= as_tibble(bhat.fit$t)
+bhat.boot
+```
+
+```{r}
+bhat.bootlong= pivot_longer(bhat.boot, cols= names(bhat.boot), names_to="variable", values_to="bootstrap_value")
+bhat.bootlong
+```
+
+```{r}
+ggplot(bhat.bootlong, aes(x=bootstrap_value)) +
+  geom_histogram(aes(y= ..density..)) +
+  stat_overlay_normal_density(linetype='dashed') +
+  facet_wrap(~ variable, scales="free")
+```
+
+```{r}
+#map_df gets quantiles for all columns, returns a data frame (tibble)
+bhat.ci= map_df(bhat.boot, quantile, probs=c(0.025,0.975), na.rm=TRUE)
+bhat.ci= cbind(varname= names(bhat.boot), bhat.ci) 
+bhat.ci
+```
+
+```{r}
+coefSummary(fit1)
+```
+```{r}
+#| code-fold: true
+yvals= 1:length(coef(fit1))
+ci= cbind(bhat.ci, confint(fit1), y.ols=yvals, y.boot=yvals+.1)
+names(ci)= c('varname','low.boot','high.boot','low.ols','high.ols','y.ols','y.boot')
+ggplot(ci) + 
+  geom_segment(aes(x=low.ols,xend=high.ols,y=y.ols,yend=y.ols)) +
+  geom_segment(aes(x=low.boot,xend=high.boot,y=y.boot,yend=y.boot), color='red') +
+  geom_text(aes(x=low.ols, y=y.ols, label=varname), nudge_y = 0.3) +
+  labs(x='Confidence interval', y='') +
+  theme(axis.text.y=element_blank(),  axis.ticks.y=element_blank()) #remove y axis labels 
+```
+
+Compare coef to permutation test
+```{r}
+fitperm1 <- lmp(G3~age +famrel+ absences+ G1+ G2,data=mat)
+summary(fitperm1)
+summary(fit1)
+```
 -->Models: fit1=bestBIC (fitall auch?)
 ```{r}
 df$predl= predict(fitall)
@@ -349,6 +417,77 @@ ggplot(df, aes(sample=scale(resl))) +
 =>Apply robust standard errors
 
 #### A.1.2 Poisson-check
+Compare CI to bootstrapped CIs
+```{r}
+fitpoi <- glm(G3~failures+ schoolsup+ famrel+ absences+ G1+ G2,family=poisson(),mat)
+#formula considering the coef that were at least significant on 10% level in full model
+f=formula(G3~failures+ schoolsup+ famrel+ absences+ G1+ G2,family=poisson() )
+bhat= function(data, indices=1:nrow(data), formula) {
+  fit= lm(formula, data=data[indices,])
+  return(coef(fit))
+}
+round(bhat(mat, formula=f), 3)
+```
+
+```{r}
+bhat.fit= boot(mat, statistic=bhat, R=2000, formula=f)
+dim(bhat.fit$t)
+round(bhat.fit$t,3)[1:5,] #show first five bootstrap samples
+```
+
+```{r}
+round(bhat.fit$t0, 3)
+```
+
+```{r}
+colnames(bhat.fit$t)= names(bhat.fit$t0)
+bhat.boot= as_tibble(bhat.fit$t)
+bhat.boot
+```
+
+```{r}
+bhat.bootlong= pivot_longer(bhat.boot, cols= names(bhat.boot), names_to="variable", values_to="bootstrap_value")
+bhat.bootlong
+```
+
+```{r}
+ggplot(bhat.bootlong, aes(x=bootstrap_value)) +
+  geom_histogram(aes(y= ..density..)) +
+  stat_overlay_normal_density(linetype='dashed') +
+  facet_wrap(~ variable, scales="free")
+```
+
+```{r}
+#map_df gets quantiles for all columns, returns a data frame (tibble)
+bhat.ci= map_df(bhat.boot, quantile, probs=c(0.025,0.975), na.rm=TRUE)
+bhat.ci= cbind(varname= names(bhat.boot), bhat.ci) 
+bhat.ci
+```
+
+```{r}
+coefSummary(fitpoi)
+```
+
+```{r}
+#| code-fold: true
+yvals= 1:length(coef(fitpoi))
+ci= cbind(bhat.ci, confint(fitpoi), y.ols=yvals, y.boot=yvals+.1)
+names(ci)= c('varname','low.boot','high.boot','low.ols','high.ols','y.ols','y.boot')
+ggplot(ci) + 
+  geom_segment(aes(x=low.ols,xend=high.ols,y=y.ols,yend=y.ols)) +
+  geom_segment(aes(x=low.boot,xend=high.boot,y=y.boot,yend=y.boot), color='red') +
+  geom_text(aes(x=low.ols, y=y.ols, label=varname), nudge_y = 0.3) +
+  labs(x='Confidence interval', y='') +
+  theme(axis.text.y=element_blank(),  axis.ticks.y=element_blank()) #remove y axis labels 
+```
+
+Compare coef to permutation test
+```{r}
+fitperm2 <- lmp(G3~failures+ schoolsup+ famrel+ absences+ G1+ G2,family=poisson(),mat)
+summary(fitperm2)
+summary(fitpoi)
+```
+
 ```{r}
 poires= mutate(df, pred= predict(fitallp), resdev= residuals(fitallp, type='deviance'), respearson= residuals(fitallp, type='pearson'))
 ```
@@ -382,6 +521,75 @@ Error normality?
 ```
 
 #### A.1.3 Binomial check
+Compare CIs to bootstrapped CIs
+```{r}
+f=formula(pass~Fedu+ famrel+ goout+ Walc+ G2,family="binomial")
+bhat= function(data, indices=1:nrow(data), formula) {
+  fit= lm(formula, data=data[indices,])
+  return(coef(fit))
+}
+round(bhat(dfbin, formula=f), 3)
+```
+
+```{r}
+bhat.fit= boot(dfbin, statistic=bhat, R=2000, formula=f)
+dim(bhat.fit$t)
+round(bhat.fit$t,3)[1:5,] #show first five bootstrap samples
+```
+
+```{r}
+round(bhat.fit$t0, 3)
+```
+
+```{r}
+colnames(bhat.fit$t)= names(bhat.fit$t0)
+bhat.boot= as_tibble(bhat.fit$t)
+bhat.boot
+```
+
+```{r}
+bhat.bootlong= pivot_longer(bhat.boot, cols= names(bhat.boot), names_to="variable", values_to="bootstrap_value")
+bhat.bootlong
+```
+
+```{r}
+ggplot(bhat.bootlong, aes(x=bootstrap_value)) +
+  geom_histogram(aes(y= ..density..)) +
+  stat_overlay_normal_density(linetype='dashed') +
+  facet_wrap(~ variable, scales="free")
+```
+
+```{r}
+#map_df gets quantiles for all columns, returns a data frame (tibble)
+bhat.ci= map_df(bhat.boot, quantile, probs=c(0.025,0.975), na.rm=TRUE)
+bhat.ci= cbind(varname= names(bhat.boot), bhat.ci) 
+bhat.ci
+```
+
+```{r}
+coefSummary(fitbin)
+```
+
+```{r}
+#| code-fold: true
+yvals= 1:length(coef(fitbin))
+ci= cbind(bhat.ci, confint(fitbin), y.ols=yvals, y.boot=yvals+.1)
+names(ci)= c('varname','low.boot','high.boot','low.ols','high.ols','y.ols','y.boot')
+ggplot(ci) + 
+  geom_segment(aes(x=low.ols,xend=high.ols,y=y.ols,yend=y.ols)) +
+  geom_segment(aes(x=low.boot,xend=high.boot,y=y.boot,yend=y.boot), color='red') +
+  geom_text(aes(x=low.ols, y=y.ols, label=varname), nudge_y = 0.3) +
+  labs(x='Confidence interval', y='') +
+  theme(axis.text.y=element_blank(),  axis.ticks.y=element_blank()) #remove y axis labels 
+```
+
+Compare coef to permutation test
+```{r}
+fitperm3 <- lmp(pass~Fedu+ famrel+ goout+ Walc+ G2,data=dfbin,family="binomial")
+summary(fitperm3)
+summary(fitbin)
+```
+
 ```{r}
 binres= mutate(df, pred= predict(fitallb), resdev= residuals(fitallb, type='deviance'), respearson= residuals(fitallb, type='pearson'))
 ```
