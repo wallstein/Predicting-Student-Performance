@@ -45,7 +45,7 @@ p2<- ggplot(df, aes(df$studytime)) + geom_histogram(binwidth=.5,color="darkblue"
 p3<- ggplot(df, aes(df$failures)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Past class failures")
 p4<- ggplot(df, aes(df$goout)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Going out scale")
 p5<- ggplot(df, aes(df$Walc)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Weekend alcohol")
-p6<- ggplot(df, aes(df$absences)) + geom_histogram(binwidth=2,color="darkblue",fill="darkblue")+labs(x="Abscences")
+p6<- ggplot(df, aes(df$absences)) + geom_histogram(binwidth=2,color="darkblue",fill="darkblue")+labs(x="Absences")
 p7<- ggplot(df, aes(df$G1)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="First period grade")
 p8<- ggplot(df, aes(df$G2)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="Second period grade")
 p9<- ggplot(df, aes(df$G3)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="Final grade")
@@ -61,6 +61,8 @@ summary(fitall)
 bestBIC(G3~., data=mat)
 fit1 <- lm(G3~age +famrel+ absences+ G1+ G2,data=mat)
 summary(fit1)
+fit2 <- gam(G3~age +famrel+ s(absences)+ G1+ G2,data=mat)
+summary(fit2)
 
 ```
 
@@ -464,9 +466,9 @@ ggplot(df, aes(sample=scale(resl))) +
 #### A.1.2 Poisson-check
 Compare CI to bootstrapped CIs
 ```{r}
-fitpoi <- glm(G3~failures+ schoolsup+ famrel+ absences+ G1+ G2,family=poisson(),mat)
+fitpoi <- glm(G3~failures+ schoolsup+ famrel+ absences+ G1+ G2,family=quasipoisson(),mat)
 #formula considering the coef that were at least significant on 10% level in full model
-f=formula(G3~failures+ schoolsup+ famrel+ absences+ G1+ G2,family=poisson() )
+f=formula(G3~failures+ schoolsup+ famrel+ absences+ G1+ G2,family=quasipoisson() )
 bhat= function(data, indices=1:nrow(data), formula) {
   fit= lm(formula, data=data[indices,])
   return(coef(fit))
@@ -678,3 +680,19 @@ ggplot(data=df, aes(G2,G3,color=pass))+
 skim(mat)
 ```
 
+
+```{r}
+b1<-ggplot(data=df, aes(G1,G3,color=pass,scale))+
+ geom_point(position="jitter")+
+ geom_smooth()+
+ geom_abline(slope=1)+
+ coord_cartesian(xlim=c(0,20))+
+ labs(x="First Period Grade",y="Final Grade")
+b2<-ggplot(data=df, aes(G2,G3,color=pass))+
+ geom_point(position="jitter")+
+ geom_smooth()+
+ geom_abline(slope=1)+
+ coord_cartesian(xlim=c(0,20))+
+ labs(x="Second Period Grade",y="Final Grade")
+grid.arrange(b1,b2, ncol=2)
+```

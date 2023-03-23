@@ -46,7 +46,7 @@ p2<- ggplot(df, aes(df$studytime)) + geom_histogram(binwidth=.5,color="darkblue"
 p3<- ggplot(df, aes(df$failures)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Past class failures")
 p4<- ggplot(df, aes(df$goout)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Going out scale")
 p5<- ggplot(df, aes(df$Walc)) + geom_histogram(binwidth=.5,color="darkblue",fill="darkblue")+labs(x="Weekend alcohol")
-p6<- ggplot(df, aes(df$absences)) + geom_histogram(binwidth=2,color="darkblue",fill="darkblue")+labs(x="Abscences")
+p6<- ggplot(df, aes(df$absences)) + geom_histogram(binwidth=2,color="darkblue",fill="darkblue")+labs(x="Absences")
 p7<- ggplot(df, aes(df$G1)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="First period grade")
 p8<- ggplot(df, aes(df$G2)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="Second period grade")
 p9<- ggplot(df, aes(df$G3)) + geom_histogram(binwidth=1,color="darkblue",fill="darkblue")+labs(x="Final grade")
@@ -681,3 +681,18 @@ ggplot(data=df, aes(G2,G3,color=pass))+
 skim(por)
 ```
 
+```{r}
+b1<-ggplot(data=df, aes(G1,G3,color=pass,scale))+
+ geom_point(position="jitter")+
+ geom_smooth()+
+ geom_abline(slope=1)+
+ coord_cartesian(xlim=c(0,20))+
+ labs(x="First Period Grade",y="Final Grade")
+b2<-ggplot(data=df, aes(G2,G3,color=pass))+
+ geom_point(position="jitter")+
+ geom_smooth()+
+ geom_abline(slope=1)+
+ coord_cartesian(xlim=c(0,20))+
+ labs(x="Second Period Grade",y="Final Grade")
+grid.arrange(b1,b2, ncol=2)
+```
