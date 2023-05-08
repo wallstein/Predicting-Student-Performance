@@ -1,8 +1,8 @@
 ---
-title: "Final Project Modern Statistical Computing"
+title: "Final Project Modern Statistical Computing - Mathematics"
 author: "Martin Blasi and Jonas Wallstein"
 date: "2023-03-15"
-output: pdf_document
+output: html_document
 ---
 
 ## Setup
