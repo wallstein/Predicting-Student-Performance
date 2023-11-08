@@ -1,64 +1,8 @@
-# MSC-Final-Project
-Repository for the Final Project in Modern Statistical Computing by Jonas Wallstein &amp; Martin Blasi
+# Predicting Student Performance
+Repository for the Final Project in the course Modern Statistical Computing at the Universitat Pompeu Fabra by Jonas Wallstein &amp; Martin Blasi
 
-## Next ToDo
-### Jonas
-- [ ] table mit significant
-- [ ] RMSE entscheiden
+# Predicting Student Performance
 
-### Martin
-- [ ] shiny app
-- [ ] bootstrap and permutation
+In this project, we undertake an extensive statistical analysis to predict student performance within Portuguese secondary education. Utilizing a dataset comprising 33 variables across 1,044 observations, we begin with a thorough descriptive analysis to understand the distribution of key predictors and their relationship with student grades. Acknowledging the limitations of traditional linear approaches, we juxtapose a linear regression model against a Poisson model, ultimately selecting the former due to its robustness as evidenced by well-behaved residuals and consistent bootstrapped confidence intervals.
 
-## Struktur
-### Part I: Modell-Annahmen prüfen: 
-IM WESENTLICH GEHT ES UM DIE LINEARE REGRESSION
-
-- Grade regression: linear => error normality + constant variance NICHT GEGEBEN!!
-=>Robust standard errors
-or poisson - error normality + constant variance & equidispersion auch NICHT GEGEBEN!!
-=>ist quasi-poisson besser?
-
-+ censored count data prüfen!! Wößmann Umgang mit student test outcomes
-
-- Binary regression: error centered at zero - roughly given
-
-### Part II: Explanation Teil weiter ausführen
-+alles für Portugisiesch laufen lassen und vergleichen
-
--subsample: Grade-differences (G1 to G3), students who got worse/better (regressions);
-
-pass/fail - different explanatory (factors)
-+unter den, die bestehen, Arbeitszeit relativ zur Note vergleichen (Hypothese: Mathe=Talentfach, Sprache=Übungsfach)
-
-Clustering? nach noten über die Perioden und ob die gruppen andere charakteristika haben
-- G3-G1: new outcome, which factors matter here? e.g. paid classes
-
-### Part III: Prediction Teil bauen
-Prediction model: cross-validation and percent of mis-classification
-
--->random forest ausprobieren? wenn wir Zeit und Lust haben
-
-## Data
-### Variables
-see Student Performance.Rmd
-
-### Additional note: 
-there are several (382) students that belong to both datasets . 
-These students can be identified by searching for identical attributes that characterize each student, as shown in the annexed R file.
-
-## Requirements final project 
--->should involve data analysis and R programming, using the methods seen in class. 
-The project must feature a regression problem with multiple covariates, and must have at least one of the following features: 
-• The outcome is a binary or count variable 
-• The model includes non-linear covariate effects 
-• The data and analysis method features a multi-level structure 
-
-Make sure to discuss model checking, interactions and non-linearities, and whether it was necessary to use computational methods to obtain confidence intervals / P-values. 
-
-You should turn in: 
-(1) You should turn in a report in pdf, with no R code (see below for its format). If it contains animations, the format can be in html but its printed size (when saved via File-> Print to file) cannot exceed the page limit (9 pages)
-(2) The markdown file with the R code used to produce the analyses 
-(3) A short dashboard or interactive document in html format displaying your main results. It should be 1 pages with ≤ 3 tabs containing only a few key figures / tables. Also turn in the markdown file with the code used to produce the document 
-
-- Final report due: March 23rd, 2023 
+We further explore a binary discrete choice model to delineate factors that significantly contribute to the likelihood of passing a course, revealing distinctions between Mathematics and Portuguese in terms of influential predictors. To refine our predictive capabilities, we employ binomial models alongside random forests, achieving a predictive accuracy of 87% for Mathematics and 93% for Portuguese. Our methodology emphasizes the importance of model selection and iterative validation, ensuring the reliability of our findings and demonstrating the efficacy of integrating classical statistical methods with advanced machine learning techniques for educational predictions.
