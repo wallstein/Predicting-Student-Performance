@@ -135,6 +135,6 @@ dmypy.json
 
 # prevent pdfs from uploading
 /code/other
-/literature
-/figures
+literature/
+figures/
 
