@@ -76,13 +76,6 @@ summary(fitallnog)
 coef.fitallnog <- as_tibble(summary(fitallnog)$coeff, rownames = "variable") %>%
   rename(p_value = 'Pr(>|t|)') %>%
   filter(p_value < 0.05)
-
-# toselect.fitallnog <- summary(fitallnog)$coeff[,4]<0.05
-# # select sig. variables
-# relevant.fitallnog <- names(toselect.fitallnog)[toselect.fitallnog == TRUE]
-# relevant.summary.fitallnog <- summary(fitallnog)$coeff[toselect.fitallnog == TRUE]
-# # formula with only sig variables
-# sig.formula <- as.formula(paste("y ~",paste(relevant.fitallnog, collapse= "+")))
 ```
 
 #### Test table
