@@ -1,7 +1,4 @@
 # Predicting Student Performance
-Repository for the Final Project in the course Modern Statistical Computing at the Universitat Pompeu Fabra by Jonas Wallstein &amp; Martin Blasi
-
-# Predicting Student Performance
 
 In this project, we undertake an extensive statistical analysis to predict student performance within Portuguese secondary education. Utilizing a dataset comprising 33 variables across 1,044 observations, we begin with a thorough descriptive analysis to understand the distribution of key predictors and their relationship with student grades. Acknowledging the limitations of traditional linear approaches, we juxtapose a linear regression model against a Poisson model, ultimately selecting the former due to its robustness as evidenced by well-behaved residuals and consistent bootstrapped confidence intervals.
 
